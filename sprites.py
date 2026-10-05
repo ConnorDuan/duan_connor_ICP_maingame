@@ -8,6 +8,7 @@ vec = pg.math.Vector2
 
 # create player class with Sprite as super Class
 
+# returns whether or not two objects are colliding as a boolean
 def collide_hit_rect(one, two):
     return one.hit_rect.colliderect(two.rect)
 
@@ -15,24 +16,23 @@ def collide_hit_rect(one, two):
 def collide_with_walls(sprite, group, dir):
     # check for x collision
     if dir == 'x':
-        # checking to see if we've collided with hitrects
+        # checking to see if collided with hitrects
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
             # this line checks to see if we're to the left of the wall
             if hits[0].rect.centerx > sprite.hit_rect.centerx:
-                # reposition the player (sprite) to the left side of the wall
+                # moves the player to the left side of the wall
                 sprite.pos.x = hits[0].rect.left - sprite.hit_rect.width / 2
             if hits[0].rect.centerx < sprite.hit_rect.centerx:
                 sprite.pos.x = hits[0].rect.right + sprite.hit_rect.width / 2 
             sprite.vel.x = 0
             sprite.hit_rect.centerx = sprite.pos.x
     if dir == 'y':
-        # checking to see if we've collided with hitrects
+        # checking to see if collided with hitrects
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
-            # this line checks to see if we're above the wall
+            # this line checks to see if the player is above the wall
             if hits[0].rect.centery > sprite.hit_rect.centery:
-                # reposition the player (sprite) to the top of the wall
                 sprite.pos.y = hits[0].rect.top - sprite.hit_rect.height / 2
             if hits[0].rect.centery < sprite.hit_rect.centery:
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2 
@@ -40,13 +40,16 @@ def collide_with_walls(sprite, group, dir):
             sprite.hit_rect.centery = sprite.pos.y
 
 class Player(Sprite):
+    # initiates player sprite
     def __init__(self, game, x, y):
+        # player falls into the group all.sprites
         self.groups = game.all_sprites
         Sprite.__init__(self, self.groups)
         self.game = game
+        # gets player image from a png called sprite_sheet
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
+        self.image = self.spritesheet.get_image(0,0,TILESIZE,TILESIZE)
         self.image.set_colorkey(BLACK)
         # self.image.fill(WHITE)
         self.rect = self.image.get_rect()
@@ -62,7 +65,9 @@ class Player(Sprite):
         self.current_frame = 0
         self.last_update = 0
         self.jumping = False
+        self.moving = False
         print("player instance created")
+        self.load_images()
     # gets player input
     def get_keys(self):
         self.vel = vec(0,0)
@@ -86,15 +91,18 @@ class Player(Sprite):
         self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(32,0, TILESIZE,TILESIZE)]
     def animate(self):
         now = pg.time.get_ticks()
-        if not self.jumping and not self.moving:
+        if not self.jumping and not self.moving: # basically player is in a state which is not moving
+            # this determines when to display the next frame
             if now - self.last_update > 350:
                 self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.standing_frames)
+                # gets the next frame from idle frames
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
                 bottom = self.rect.bottom
-                self.image = self.standing_frames[self.current_frame]
+                self.image = self.idle_frames[self.current_frame]
                 self.rect = self.image.get_rect()
                 self.rect.bottom = bottom
         elif self.moving:
+            # getting frames for a moving state
             if now - self.last_update > 350:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.moving_frames)
@@ -104,6 +112,7 @@ class Player(Sprite):
                 self.rect.bottom = bottom
             
     def update(self):
+        # this block of code puts everything together like the update in the game class
         self.get_keys()
         self.animate()
         self.rect.center = self.pos
@@ -118,6 +127,7 @@ class Player(Sprite):
 
 class Wall(Sprite):
     def __init__(self, game, x, y):
+        # walls go in all_walls
         self.groups = game.all_sprites, game.all_walls
         Sprite.__init__(self, self.groups)
         self.game = game

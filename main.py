@@ -17,9 +17,8 @@ from sprites import *
 from utils import *
 
 
-# the game class a blueprint for the whole game...
+# the game class is a blueprint for the whole game
 class Game:
-    # 
     def __init__(self):
         pg.init()
         pg.mixer.init()
@@ -35,11 +34,11 @@ class Game:
         self.snd_dir = path.join(self.game_dir, 'sounds')
         self.map = Map(path.join(self.game_dir, map))
 
-    def new(self):
+# uses level1.txt to see where each object starts
+    def new(self): 
         self.load_data('level1.txt')
         self.all_sprites = pg.sprite.Group()
         self.all_walls = pg.sprite.Group()
-        # instantiate player here
         
         self.wall = Wall(self,5,0)
         print(self.map.data)
@@ -57,7 +56,7 @@ class Game:
             # sets the delta time property and runs the tick function at FPS/1000
             self.dt = self.clock.tick(FPS) / 1000
             self.events() # this gets player input
-            self.update() # this updates the game
+            self.update() # this updates the game every frame
             self.draw() # this draws sprites
     
     def events(self):
@@ -70,10 +69,10 @@ class Game:
     def update(self):
         self.all_sprites.update()
     
+    # draws out the game
     def draw(self):
         self.screen.fill(BLUE)
         self.all_sprites.draw(self.screen)
-        # 
         pg.display.flip()
 
 if __name__ == "__main__":
