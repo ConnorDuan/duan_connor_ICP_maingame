@@ -8,6 +8,12 @@ Input - keys, buttons, voice, mouse, touch, breath, movement, control stick
 Process - input processed (direction of control, magnitude)
 Output - Draw new frames pixels, sound, haptics (senses)
 (Store)
+
+
+GOALS: beat the final boss to save the kingdom
+RULES: walls, health
+FEEDBACK: visuals and sounds
+FREEDOM: fight enemies in different ways
 '''
 
 import pygame as pg
@@ -34,7 +40,7 @@ class Game:
         self.snd_dir = path.join(self.game_dir, 'sounds')
         self.map = Map(path.join(self.game_dir, map))
 
-# uses level1.txt to see where each object starts
+# instantiates sprite groups sets up everything
     def new(self): 
         self.load_data('level1.txt')
         self.all_sprites = pg.sprite.Group()
@@ -50,6 +56,10 @@ class Game:
             for col, tile in enumerate(tiles):
                 if tile == 'P':
                     self.player = Player(self, col, row)
+        for row, tiles in enumerate(self.map.data):
+                    for col, tile in enumerate(tiles):
+                        if tile == 'E':
+                            self.player = Enemy(self, col, row)
 
     def run(self):
         while self.running:
@@ -68,11 +78,23 @@ class Game:
     # this block of code handles processing of changes based on input
     def update(self):
         self.all_sprites.update()
+        
+    def draw_text(self, text, size, color, x, y):
+        font_name = pg.font.match_font('arial')
+        # intantiate the Font class
+        font = pg.font.Font(font_name, size)
+        # surface is a class in pygame that lets you draw things on a surface
+        text_surface = font.render(text, True, color)
+        # get_rect gets rectangle area from surface sets up collision and stuff
+        text_rect = text_surface.get_rect()
+        text_rect.midtop = (x,y)
+        self.screen.blit(text_surface, text_rect)
     
     # draws out the game
     def draw(self):
         self.screen.fill(BLUE)
         self.all_sprites.draw(self.screen)
+        self.draw_text("Frames per second: " + str(floor(1/self.dt) ), 24, WHITE, WIDTH/2, HEIGHT/4)
         pg.display.flip()
 
 if __name__ == "__main__":

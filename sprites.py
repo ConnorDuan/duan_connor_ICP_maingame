@@ -46,7 +46,7 @@ class Player(Sprite):
         self.groups = game.all_sprites
         Sprite.__init__(self, self.groups)
         self.game = game
-        # gets player image from a png called sprite_sheet
+        # provides raster images for animation or otherwise
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
         self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image = self.spritesheet.get_image(0,0,TILESIZE,TILESIZE)
@@ -61,9 +61,10 @@ class Player(Sprite):
         # self.x = x * TILESIZE
         # self.y = y * TILESIZE
         self.hit_rect = PLAYER_HIT_RECT
-        # animation stuff
+        # start with current frames and last update at zero so we can cycle through animations
         self.current_frame = 0
         self.last_update = 0
+        # accounting for the states of the player
         self.jumping = False
         self.moving = False
         print("player instance created")
@@ -123,7 +124,72 @@ class Player(Sprite):
         collide_with_walls(self, self.game.all_walls, 'y')
         self.rect.center = self.hit_rect.center
 
-   
+class Enemy(Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites
+        Sprite.__init__(self, self.groups)
+        self.game = game
+        # provides raster images for animation or otherwise
+        self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
+        self.image = pg.Surface((TILESIZE, TILESIZE))
+        self.image = self.spritesheet.get_image(0,0,TILESIZE,TILESIZE)
+        self.image.set_colorkey(BLACK)
+        # self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        # self.vx, self.vy = 0,0
+        self.vel = vec(0,0)
+        self.pos = vec(x,y) * TILESIZE
+        # self.x = x * TILESIZE
+        # self.y = y * TILESIZE
+        self.hit_rect = ENEMY_HIT_RECT
+        # start with current frames and last update at zero so we can cycle through animations
+        self.current_frame = 0
+        self.last_update = 0
+        # accounting for the states of the player
+        self.attacking = False
+        self.hurting = False
+        self.moving = False
+        print("enemy instance created")
+        self.load_images()
+        
+    # gets player input
+    def load_images(self):
+        self.idle_frames = [self.spritesheet.get_image(0,32, TILESIZE,TILESIZE), self.spritesheet.get_image(32,32, TILESIZE,TILESIZE)]
+    def animate(self):
+        now = pg.time.get_ticks()
+        if not self.attacking and not self.hurting and not self.moving: # basically enemy is in a state which is not moving
+            # this determines when to display the next frame
+            if now - self.last_update > 350:
+                self.last_update = now
+                # gets the next frame from idle frames
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
+                bottom = self.rect.bottom
+                self.image = self.idle_frames[self.current_frame]
+                self.rect = self.image.get_rect()
+                self.rect.bottom = bottom
+        elif self.moving:
+            # getting frames for a moving state
+            if now - self.last_update > 350:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.moving_frames)
+                bottom = self.rect.bottom
+                self.image = self.moving_frames[self.current_frame]
+                self.rect = self.image.get_rect()
+                self.rect.bottom = bottom
+            
+    def update(self):
+        # this block of code puts everything together like the update in the game class
+        self.animate()
+        self.rect.center = self.pos
+        self.pos += self.vel * self.game.dt
+        self.hit_rect.centerx = self.pos.x
+        collide_with_walls(self, self.game.all_walls, 'x')
+        self.hit_rect.centery = self.pos.y
+        collide_with_walls(self, self.game.all_walls, 'y')
+        self.rect.center = self.hit_rect.center
+
 
 class Wall(Sprite):
     def __init__(self, game, x, y):
