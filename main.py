@@ -8,12 +8,13 @@ Input - keys, buttons, voice, mouse, touch, breath, movement, control stick
 Process - input processed (direction of control, magnitude)
 Output - Draw new frames pixels, sound, haptics (senses)
 (Store)
+change test
 
 
-GOALS: beat the final boss to save the kingdom
-RULES: walls, health
-FEEDBACK: visuals and sounds
-FREEDOM: fight enemies in different ways
+GOALS: Collect Dragon Eggs 
+RULES: Have to do it in a certain amount of time
+FEEDBACK: 
+FREEDOM: 
 '''
 
 import pygame as pg
@@ -23,8 +24,9 @@ from sprites import *
 from utils import *
 
 
-# the game class is a blueprint for the whole game
+# the game class a blueprint for the whole game...
 class Game:
+    # 
     def __init__(self):
         pg.init()
         pg.mixer.init()
@@ -40,33 +42,31 @@ class Game:
         self.snd_dir = path.join(self.game_dir, 'sounds')
         self.map = Map(path.join(self.game_dir, map))
 
-# instantiates sprite groups sets up everything
-    def new(self): 
+    def new(self):
         self.load_data('level1.txt')
         self.all_sprites = pg.sprite.Group()
         self.all_walls = pg.sprite.Group()
+        self.all_mobs = pg.sprite.Group()
+        # instantiate player here
         
-        self.wall = Wall(self,5,0)
         print(self.map.data)
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == '1':
                     Wall(self, col, row)
+                if tile == 'M':
+                    Mob(self, col, row)
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == 'P':
                     self.player = Player(self, col, row)
-        for row, tiles in enumerate(self.map.data):
-                    for col, tile in enumerate(tiles):
-                        if tile == 'E':
-                            self.player = Enemy(self, col, row)
 
     def run(self):
         while self.running:
             # sets the delta time property and runs the tick function at FPS/1000
             self.dt = self.clock.tick(FPS) / 1000
             self.events() # this gets player input
-            self.update() # this updates the game every frame
+            self.update() # this updates the game
             self.draw() # this draws sprites
     
     def events(self):
@@ -78,19 +78,16 @@ class Game:
     # this block of code handles processing of changes based on input
     def update(self):
         self.all_sprites.update()
-        
+    # draw text on screen anywhere 
     def draw_text(self, text, size, color, x, y):
         font_name = pg.font.match_font('arial')
-        # intantiate the Font class
+        # instantiate the Font class
         font = pg.font.Font(font_name, size)
-        # surface is a class in pygame that lets you draw things on a surface
         text_surface = font.render(text, True, color)
-        # get_rect gets rectangle area from surface sets up collision and stuff
         text_rect = text_surface.get_rect()
         text_rect.midtop = (x,y)
         self.screen.blit(text_surface, text_rect)
-    
-    # draws out the game
+
     def draw(self):
         self.screen.fill(BLUE)
         self.all_sprites.draw(self.screen)
