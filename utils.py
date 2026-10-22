@@ -23,7 +23,8 @@ class Spritesheet:
     def get_image(self, x, y, width, height):
         image = pg.Surface((width, height))
         image.blit(self.spritesheet, (0,0), (x,y, width, height))
-        # when applying pygame transformation translation rotation and scale we need to pass the newly transformed object into a a new variable
+        # when applying pygame transformation translation rotation and scale,
+        # we need to pass the newly transformed object into a a new variable
         new_image = pg.transform.scale(image, (width, height))
         image = new_image
         return image

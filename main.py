@@ -1,4 +1,4 @@
-# This file was created by: Chris Cozort
+# This file was created by: Connor Duan
 # Content inspired by: Chris Bradfield
 # I do solemnly swear to create concise and informative comments
 
@@ -11,10 +11,10 @@ Output - Draw new frames pixels, sound, haptics (senses)
 change test
 
 
-GOALS: Collect Dragon Eggs 
-RULES: Have to do it in a certain amount of time
-FEEDBACK: 
-FREEDOM: 
+GOALS: Beat the Final Boss
+RULES: Have to do it with weapons given, enemies
+FEEDBACK: visuals, sounds
+FREEDOM: fight any way you like!
 '''
 
 import pygame as pg
@@ -24,9 +24,9 @@ from sprites import *
 from utils import *
 
 
-# the game class a blueprint for the whole game...
+# the game class a blueprint for the whole game, it does not run the game, you gotta instantiate stuff to use them
 class Game:
-    # 
+    # when Game class is initialized, the init function makes tht specific instance become self
     def __init__(self):
         pg.init()
         pg.mixer.init()
@@ -40,21 +40,24 @@ class Game:
 
     def load_data(self, map):
         self.game_dir = path.dirname(__file__)
-        self.game_save_dir = path.join(self.game_dir, "highscore.txt")
+        self.game_save_file = path.join(self.game_dir, "highscore.txt")
         self.img_dir = path.join(self.game_dir, 'images')
+        # sound handling 
         self.snd_dir = path.join(self.game_dir, 'sounds')
+        self.pickup_snd = pg.mixer.Sound(path.join(self.snd_dir, "coin_pickup.mp3"))
+        
         self.map = Map(path.join(self.game_dir, map))
         
-        # sees if file exists and creates if not
+        # sees if file exists and creates if not this is what 'x' tells with open
         try:
-            with open(self.game_save_dir, "x", encoding = "utf-8") as file:
+            with open(self.game_save_file, 'x', encoding = "utf-8") as file:
                 file.write("Hello World!")
             print("File created successfully.")
         except FileExistsError:
             print("File already exists. No action taken.")
             
         # open file and try to set highscore with except set highscore to zero
-        with open(self.game_save_dir, 'r') as f:
+        with open(self.game_save_file, 'r') as f:
             try:
                 self.highscore = int(f.read())
                 print('high score set')
@@ -64,11 +67,12 @@ class Game:
 
     def new(self):
         self.load_data('level1.txt')
+
+        # instantiates each group of sprites
         self.all_sprites = pg.sprite.Group()
         self.all_walls = pg.sprite.Group()
         self.all_mobs = pg.sprite.Group()
         self.all_coins = pg.sprite.Group()
-        # instantiate player here
         
         print(self.map.data)
         for row, tiles in enumerate(self.map.data):
@@ -77,12 +81,14 @@ class Game:
                     Wall(self, col, row)
                 if tile == 'M':
                     Mob(self, col, row)
-                if tile == '.':
+                if tile == 'C':
                     Coin(self, col, row)
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == 'P':
                     self.player = Player(self, col, row)
+        pg.mixer.music.load(path.join(self.snd_dir, "background_music.ogg"))
+        pg.mixer.music.play(loops = -1)
 
     def run(self):
         while self.running:
@@ -95,13 +101,17 @@ class Game:
     def events(self):
         for event in pg.event.get():
             if event.type == pg.QUIT:
+                # write score when you quit
+                with open(path.join(self.game_dir, self.game_save_file), 'w') as f:
+                    f.write(str(self.score))
                 if self.playing:
                     self.playing = False
                 self.running = False
-    # this block of code handles processing of changes based on input
+                
+        
     def update(self):
         self.all_sprites.update()
-    # draw text on screen anywhere 
+
     def draw_text(self, text, size, color, x, y):
         font_name = pg.font.match_font('arial')
         # instantiate the Font class
@@ -116,6 +126,7 @@ class Game:
         self.all_sprites.draw(self.screen)
         self.draw_text("Frames per second: " + str(floor(1/self.dt) ), 24, WHITE, WIDTH/2, HEIGHT/4)
         self.draw_text(f"Coins:{self.player.coins}", 24, WHITE, WIDTH/2, HEIGHT/4)
+        # updates screen with everything drawn in back buffer flips current screen to become new back buffer
         pg.display.flip()
 
 if __name__ == "__main__":

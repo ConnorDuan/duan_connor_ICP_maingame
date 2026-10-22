@@ -37,6 +37,7 @@ def collide_with_walls(sprite, group, dir):
 class Player(Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites
+        # also __init__ superclass so Player class has features of superclass
         Sprite.__init__(self, self.groups)
         self.game = game
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
@@ -91,7 +92,8 @@ class Player(Sprite):
                 self.image = self.moving_frames[self.current_frame]
                 self.rect = self.image.get_rect()
                 self.rect.bottom = bottom
-            
+
+
     def update(self):
         self.get_keys()
         self.rect.center = self.pos
@@ -99,9 +101,10 @@ class Player(Sprite):
         hits = pg.sprite.spritecollide(self, self.game.all_coins, True)
         if hits:
             self.coins += 1
-            self.game.score +=1
-            print(f"I have {self.coins} coins")
-            
+            self.game.score += 1
+            self.game.pickup_snd.play()
+            # print(f"I have {self.coins} coins")
+
         self.hit_rect.centerx = self.pos.x
         collide_with_walls(self, self.game.all_walls, 'x')
         self.hit_rect.centery = self.pos.y
@@ -152,7 +155,7 @@ class Mob(Sprite):
                     self.rect.bottom = bottom
     
     def follow(self, obj):
-        # make the player follow the given object
+        # sets direction mob will move in to the direction from mob to player
         direction = vec(obj.rect.centerx - self.rect.centerx, obj.rect.centery - self.rect.centery)
         if direction.length() > 0:
             direction = direction.normalize()
@@ -186,8 +189,10 @@ class Coin(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        pg.draw.circle(self.image, (GOLD), (TILESIZE/2, TILESIZE/2), TILESIZE/2)
+        pg.draw.circle(self.image, GOLD, (TILESIZE/2, TILESIZE/2), TILESIZE/2)
+        # pg.draw.ellipse(self.image, GOLD, (TILESIZE/2, TILESIZE/2), TILESIZE/2)
         self.image.set_colorkey(BLACK)
+        # self.image.fill(GOLD)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0) 
         self.pos = vec(x,y) * TILESIZE
