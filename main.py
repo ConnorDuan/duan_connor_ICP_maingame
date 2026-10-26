@@ -45,12 +45,11 @@ class Game:
         # sound handling 
         self.snd_dir = path.join(self.game_dir, 'sounds')
         self.pickup_snd = pg.mixer.Sound(path.join(self.snd_dir, "coin_pickup.mp3"))
-        
         self.map = Map(path.join(self.game_dir, map))
         
         # sees if file exists and creates if not this is what 'x' tells with open
         try:
-            with open(self.game_save_file, 'x', encoding = "utf-8") as file:
+            with open(self.game_save_file, 'x', encoding="utf-8") as file:
                 file.write("Hello World!")
             print("File created successfully.")
         except FileExistsError:
@@ -73,6 +72,7 @@ class Game:
         self.all_walls = pg.sprite.Group()
         self.all_mobs = pg.sprite.Group()
         self.all_coins = pg.sprite.Group()
+        self.all_particles = pg.sprite.Group()
         
         print(self.map.data)
         for row, tiles in enumerate(self.map.data):
@@ -88,7 +88,7 @@ class Game:
                 if tile == 'P':
                     self.player = Player(self, col, row)
         pg.mixer.music.load(path.join(self.snd_dir, "background_music.ogg"))
-        pg.mixer.music.play(loops = -1)
+        pg.mixer.music.play(loops=-1)
 
     def run(self):
         while self.running:
@@ -102,8 +102,9 @@ class Game:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 # write score when you quit
-                with open(path.join(self.game_dir, self.game_save_file), 'w') as f:
-                    f.write(str(self.score))
+                if self.score > self.highscore:
+                    with open(path.join(self.game_dir, self.game_save_file), 'w') as f:
+                        f.write(str(self.score))
                 if self.playing:
                     self.playing = False
                 self.running = False
@@ -126,6 +127,7 @@ class Game:
         self.all_sprites.draw(self.screen)
         self.draw_text("Frames per second: " + str(floor(1/self.dt) ), 24, WHITE, WIDTH/2, HEIGHT/4)
         self.draw_text(f"Coins:{self.player.coins}", 24, WHITE, WIDTH/2, HEIGHT/4)
+        self.draw_text(f"High Score:{self.highscore}", 24, WHITE, WIDTH/2, HEIGHT/11)
         # updates screen with everything drawn in back buffer flips current screen to become new back buffer
         pg.display.flip()
 
