@@ -46,7 +46,10 @@ class Player(Sprite):
         self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
+        
+        # player motion attributes
         self.vel = vec(0,0)
+        self.acc = vec(0,0)
         self.pos = vec(x,y) * TILESIZE
         self.hit_rect = PLAYER_HIT_RECT
         self.current_frame = 0
@@ -58,16 +61,23 @@ class Player(Sprite):
         self.load_images()
     # gets player input
     def get_keys(self):
-        self.vel = vec(0, 0)
+        # self.vel = vec(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_a]:
-            self.vel.x = -PLAYER_SPEED
+            # self.vel.x = -PLAYER_SPEED
+            self.acc.x = -5
         if keys[pg.K_d]:
-            self.vel.x = PLAYER_SPEED
+            # self.vel.x = PLAYER_SPEED
+            self.acc.x = 5
         if keys[pg.K_w]:
-            self.vel.y = -PLAYER_SPEED
+            # self.vel.y = -PLAYER_SPEED
+            self.acc.y = -5
         if keys[pg.K_s]:
-            self.vel.y = PLAYER_SPEED
+            # self.vel.y = PLAYER_SPEED
+            self.acc.y = 5
+        if keys[pg.K_SPACE]:
+            # self.vel.y = PLAYER_SPEED
+            self.acc.y = -20
         if self.vel.x != 0 and self.vel.y != 0:
             self.vel *= 0.7071
     def jump(self):
@@ -96,16 +106,22 @@ class Player(Sprite):
 
 
     def update(self):
+        self.acc = vec(0,9.8)
         self.get_keys()
+        self.acc.x += self.vel.x * PLAYER_FRIC
+        self.acc.y += self.vel.y * PLAYER_FRIC
+        self.vel += self.acc
+        
         self.rect.center = self.pos
-        self.pos += self.vel * self.game.dt
+        # self.pos += self.vel * self.game.dt
+        self.pos += self.vel + 0.5 * self.acc
         hits = pg.sprite.spritecollide(self, self.game.all_coins, True)
         if hits:
             self.coins += 1
             self.game.score += 1
             self.game.pickup_snd.play()
             # print(f"I have {self.coins} coins")
-            for i in range(100):
+            for i in range(20):
                 Particle(self.game, hits[0].rect.x, hits[0].rect.y)
                 hits[0].kill()
             print(str(len(self.game.all_particles)))
@@ -182,12 +198,12 @@ class Particle(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE/4, TILESIZE/4))
-        self.image.fill(GREEN)
+        self.image.fill(GOLD)
         self.rect = self.image.get_rect()
         self.vel = vec(randint(-180,180),randint(-180,180))
         self.pos = vec(x,y)
         self.rect.center = self.pos
-        self.speed = 5
+        self.speed = 8
         self.countdown = Cooldown()
         self.countdown.event_time = floor(pg.time.get_ticks()/1000)
         print("I created a particle!")
@@ -200,6 +216,7 @@ class Particle(Sprite):
         if self.countdown.delta > 1:
             self.kill()
             print(str(len(self.game.all_particles)))
+            
         self.rect.x = self.pos.x
         self.rect.y = self.pos.y
     
