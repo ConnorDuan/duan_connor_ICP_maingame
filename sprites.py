@@ -51,44 +51,42 @@ class Player(Sprite):
         self.vel = vec(0,0)
         self.acc = vec(0,0)
         self.pos = vec(x,y) * TILESIZE
+        self.cofric = PLAYER_FRIC
+        
         self.hit_rect = PLAYER_HIT_RECT
         self.current_frame = 0
         self.last_update = 0
         self.jumping = False
         self.moving = False
-        self.cofric = -0.1
+  
         self.coins = 0
         print("player instance created")
         self.load_images()
+        
     # gets player input
     def get_keys(self):
-        # self.vel = vec(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_a]:
-            # self.vel.x = -PLAYER_SPEED
-            self.acc.x = -5
+            self.acc.x = -PLAYER_ACC
         if keys[pg.K_d]:
-            # self.vel.x = PLAYER_SPEED
-            self.acc.x = 5
+            self.acc.x = PLAYER_ACC
         if keys[pg.K_w]:
-            # self.vel.y = -PLAYER_SPEED
-            self.acc.y = -5
+            self.acc.y = -PLAYER_ACC
         if keys[pg.K_s]:
-            # self.vel.y = PLAYER_SPEED
-            self.acc.y = 5
-        if keys[pg.K_SPACE]:
-            # self.vel.y = PLAYER_SPEED
-            self.acc.y = -20
+            self.acc.y = PLAYER_ACC
         if self.vel.x != 0 and self.vel.y != 0:
             self.vel *= 0.7071
+    
     def jump(self):
         pass
+    
     def load_images(self):
         self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(32,0, TILESIZE,TILESIZE)]
+        
     def animate(self):
         now = pg.time.get_ticks()
         if not self.jumping and not self.moving:
-            # this determines when to display the next frame
+            # this determines when to update the screen
             if now - self.last_update > 350:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
@@ -107,22 +105,36 @@ class Player(Sprite):
 
 
     def update(self):
+        self.animate()
         self.acc = vec(0,0)
         self.get_keys()
+        
+        # top down games have cofric for y too
+        self.acc.x += self.vel.x * self.cofric
+        self.acc.y += self.vel.y * self.cofric
+        
+        self.vel += self.acc * self.game.dt
+        
+        # max_fall_speed = TILESIZE / max(self.game.dt, 0.001)
+        # self.vel.y = min(self.vel.y, max_fall_speed)
+        
+        if abs(self.vel.x) < 0.1:
+              self.vel.x = 0
+        if abs(self.vel.y) < 0.1:
+              self.vel.y = 0
+        
+        self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
         tile_hits = pg.sprite.spritecollide(self, self.game.all_tiles, False)
+        
         if tile_hits:
             if tile_hits[0].variant == 'ice':
                 self.cofric = -.001
             else:
                 self.cofric = -.01
         
-        self.acc.x += self.vel.x * self.cofric
-        self.acc.y += self.vel.y * self.cofric
-        self.vel += self.acc
-        
         self.rect.center = self.pos
         # self.pos += self.vel * self.game.dt
-        self.pos += self.vel * self.game.dt + 0.5 * self.acc
+        
         self.pos += self.vel + 0.5 * self.acc
         
                 

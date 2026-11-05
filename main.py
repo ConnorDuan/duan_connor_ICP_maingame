@@ -11,10 +11,10 @@ Output - Draw new frames pixels, sound, haptics (senses)
 change test
 
 
-GOALS: Beat the Final Boss
-RULES: Have to do it with weapons given, enemies
+GOALS: survive for as long as you can
+RULES: enemies chase you only throw weapons
 FEEDBACK: visuals, sounds
-FREEDOM: fight any way you like!
+FREEDOM: you can befriend enemies
 '''
 
 import pygame as pg
@@ -116,6 +116,7 @@ class Game:
                 
         
     def update(self):
+        # updates all groups of sprites by calling their update function
         self.all_sprites.update()
 
     def draw_text(self, text, size, color, x, y):
