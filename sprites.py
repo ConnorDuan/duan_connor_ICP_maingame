@@ -66,14 +66,16 @@ class Player(Sprite):
     # gets player input
     def get_keys(self):
         keys = pg.key.get_pressed()
-        if keys[pg.K_a]:
+        if keys[pg.K_LEFT]:
             self.acc.x = -PLAYER_ACC
-        if keys[pg.K_d]:
+        if keys[pg.K_RIGHT]:
             self.acc.x = PLAYER_ACC
-        if keys[pg.K_w]:
-            self.acc.y = -PLAYER_ACC
-        if keys[pg.K_s]:
+        if keys[pg.K_DOWN]:
             self.acc.y = PLAYER_ACC
+            
+        if keys[pg.K_UP] and self.jumping == False:
+            self.acc.y = -PLAYER_ACC
+            
         if self.vel.x != 0 and self.vel.y != 0:
             self.vel *= 0.7071
     
@@ -81,7 +83,7 @@ class Player(Sprite):
         pass
     
     def load_images(self):
-        self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(32,0, TILESIZE,TILESIZE)]
+        self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(TILESIZE,0, TILESIZE,TILESIZE)]
         
     def animate(self):
         now = pg.time.get_ticks()
@@ -94,19 +96,26 @@ class Player(Sprite):
                 self.image = self.idle_frames[self.current_frame]
                 self.rect = self.image.get_rect()
                 self.rect.bottom = bottom
-        elif self.moving:
-            if now - self.last_update > 350:
-                self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.moving_frames)
-                bottom = self.rect.bottom
-                self.image = self.moving_frames[self.current_frame]
-                self.rect = self.image.get_rect()
-                self.rect.bottom = bottom
-
+        # elif self.moving:
+        #     if now - self.last_update > 350:
+        #         self.last_update = now
+        #         self.current_frame = (self.current_frame + 1) % len(self.moving_frames)
+        #         bottom = self.rect.bottom
+        #         self.image = self.moving_frames[self.current_frame]
+        #         self.rect = self.image.get_rect()
+        #         self.rect.bottom = bottom
+        # elif self.jumping:
+        #     if now - self.last_update > 350:
+        #         self.last_update = now
+        #         self.current_frame = (self.current_frame + 1) % len(self.jumping_frames)
+        #         bottom = self.rect.bottom
+        #         self.image = self.jumping_frames[self.current_frame]
+        #         self.rect = self.image.get_rect()
+        #         self.rect.bottom = bottom
 
     def update(self):
         self.animate()
-        self.acc = vec(0,0)
+        self.acc = vec(0,9.8)
         self.get_keys()
         
         # top down games have cofric for y too
@@ -124,13 +133,12 @@ class Player(Sprite):
               self.vel.y = 0
         
         self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
-        tile_hits = pg.sprite.spritecollide(self, self.game.all_tiles, False)
+        floor_hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
         
-        if tile_hits:
-            if tile_hits[0].variant == 'ice':
-                self.cofric = -.001
-            else:
-                self.cofric = -.01
+        if floor_hits:
+            self.jumping = False
+        elif floor_hits != True:
+            self.jumping = True
         
         self.rect.center = self.pos
         # self.pos += self.vel * self.game.dt
