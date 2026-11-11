@@ -13,7 +13,7 @@ def collide_hit_rect(one, two):
     return one.hit_rect.colliderect(two.rect)
 
 # this function checks for x and y collision in sequence and sets the position based on collision direction
-def collide_with_walls(sprite, group, dir):
+def collide_with_stuff(sprite, group, dir):
     if dir == 'x':
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
@@ -37,6 +37,7 @@ def collide_with_walls(sprite, group, dir):
 
 class Player(Sprite):
     def __init__(self, game, x, y):
+        self.facing_right = True
         self.groups = game.all_sprites
         # also __init__ superclass so Player class has features of superclass
         Sprite.__init__(self, self.groups)
@@ -44,7 +45,7 @@ class Player(Sprite):
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
         self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
-        self.image.set_colorkey(BLACK)
+        # self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
         
         # player motion attributes
@@ -68,16 +69,18 @@ class Player(Sprite):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
             self.acc.x = -PLAYER_ACC
+            self.facing_right = False
         if keys[pg.K_RIGHT]:
             self.acc.x = PLAYER_ACC
+            self.facing_right = True
         if keys[pg.K_DOWN]:
             self.acc.y = PLAYER_ACC
             
         if keys[pg.K_UP] and self.jumping == False:
-            self.acc.y = -PLAYER_ACC
+            self.vel.y = -PLAYER_JUMP_ACC
             
-        if self.vel.x != 0 and self.vel.y != 0:
-            self.vel *= 0.7071
+        # if self.vel.x != 0 and self.vel.y != 0:
+        #     self.vel *= 0.7071
     
     def jump(self):
         pass
@@ -94,6 +97,11 @@ class Player(Sprite):
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
                 bottom = self.rect.bottom
                 self.image = self.idle_frames[self.current_frame]
+                
+                # now the player sprite faces the way its walking
+                if self.facing_right == False:
+                    self.image = pg.transform.flip(self.image, True, False)
+                    
                 self.rect = self.image.get_rect()
                 self.rect.bottom = bottom
         # elif self.moving:
@@ -114,25 +122,24 @@ class Player(Sprite):
         #         self.rect.bottom = bottom
 
     def update(self):
-        self.animate()
-        self.acc = vec(0,9.8)
+        
+        self.acc = vec(0,20)
         self.get_keys()
+        self.animate()
         
-        # top down games have cofric for y too
         self.acc.x += self.vel.x * self.cofric
-        self.acc.y += self.vel.y * self.cofric
+        self.vel.x += self.acc.x * self.game.dt
+        self.vel.y += self.acc.y * self.game.dt
         
-        self.vel += self.acc * self.game.dt
-        
-        # max_fall_speed = TILESIZE / max(self.game.dt, 0.001)
-        # self.vel.y = min(self.vel.y, max_fall_speed)
+        max_fall_speed = TILESIZE / max(self.game.dt, 0.001)
+        self.vel.y = min(self.vel.y, max_fall_speed)
         
         if abs(self.vel.x) < 0.1:
               self.vel.x = 0
         if abs(self.vel.y) < 0.1:
               self.vel.y = 0
         
-        self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
+        # self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
         floor_hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
         
         if floor_hits:
@@ -141,11 +148,14 @@ class Player(Sprite):
             self.jumping = True
         
         self.rect.center = self.pos
+        
         # self.pos += self.vel * self.game.dt
         
         self.pos += self.vel + 0.5 * self.acc
         
-                
+        if self.vel.y == 0:
+            self.jumping = False
+            
         hits = pg.sprite.spritecollide(self, self.game.all_coins, True)
         if hits:
             self.coins += 1
@@ -158,9 +168,9 @@ class Player(Sprite):
             print(str(len(self.game.all_particles)))
 
         self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.all_walls, 'x')
+        collide_with_stuff(self, self.game.all_walls, 'x')
         self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.all_walls, 'y')
+        collide_with_stuff(self, self.game.all_walls, 'y')
         self.rect.center = self.hit_rect.center
 
 class Mob(Sprite):
@@ -170,14 +180,14 @@ class Mob(Sprite):
         self.game = game
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
         self.image = self.spritesheet.get_image(64,0,TILESIZE, TILESIZE)
-        self.image.set_colorkey(BLACK)
+        # self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.speed = 100
         self.vel = vec(0,0)
         self.pos = vec(x,y) * TILESIZE
-        self.hit_rect = MOB_HIT_RECT
+        self.hit_rect = MOB_HIT_RECT.copy()
         self.current_frame = 0
         self.last_update = 0
         self.jumping = False
@@ -205,9 +215,39 @@ class Mob(Sprite):
                     self.image = self.moving_frames[self.current_frame]
                     self.rect = self.image.get_rect()
                     self.rect.bottom = bottom
+                    
+    def can_see(self, obj):
+        my_pos = vec(self.rect.center)
+        obj_pos = vec(obj.rect.center)
+        sight_line = obj_pos - my_pos
+        dist = sight_line.length()
+
+        if sight_line == (0,0):
+            return True
+        
+        # normalizing stuff gives the simplest version of a vector the direction only
+        sight_dir = sight_line.normalize()
+        check_rect = pg.Rect(0, 0, 4, 4)
+        
+        obj_dist = 0
+        
+        
+        while obj_dist < dist:
+            current_pos = my_pos + sight_dir * obj_dist
+            check_rect.center = (current_pos.x, current_pos.y)
+            for wall in self.game.all_walls:
+                if check_rect.colliderect(wall.rect):
+                    return False
+
+            obj_dist += 4
+
+        return True        
+    
+    def behave(self, obj):
+        if self.can_see(obj) == True:
+            self.follow(obj)
     
     def follow(self, obj):
-        # sets direction mob will move in to the direction from mob to player
         direction = vec(obj.rect.centerx - self.rect.centerx, obj.rect.centery - self.rect.centery)
         if direction.length() > 0:
             direction = direction.normalize()
@@ -215,12 +255,16 @@ class Mob(Sprite):
     
     def update(self):
         self.animate()
-        self.follow(self.game.player)
+        # self.follow(self.game.player)
+        self.behave(self.game.player)
         self.pos += self.vel * self.speed * self.game.dt
         self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.all_walls, 'x')
+        collide_with_stuff(self, self.game.all_walls, 'x')
         self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.all_walls, 'y')
+        collide_with_stuff(self, self.game.all_walls, 'y')
+        collide_with_stuff(self, self.game.all_sprites, 'x')
+        collide_with_stuff(self, self.game.all_sprites, 'y')
+    
         self.rect.center = self.hit_rect.center
 
 class Particle(Sprite):
@@ -258,7 +302,7 @@ class Wall(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(GREEN)
+        self.image.fill(AQUA)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0) 
         self.pos = vec(x,y) * TILESIZE

@@ -131,9 +131,9 @@ class Game:
     def draw(self):
         self.screen.fill(BLUE)
         self.all_sprites.draw(self.screen)
-        self.draw_text("Frames per second: " + str(floor(1/self.dt) ), 24, WHITE, WIDTH/2, HEIGHT/4)
-        self.draw_text(f"Coins:{self.player.coins}", 24, WHITE, WIDTH/2, HEIGHT/4)
-        self.draw_text(f"High Score:{self.highscore}", 24, WHITE, WIDTH/2, HEIGHT/11)
+        # self.draw_text("Frames per second: " + str(floor(1/self.dt) ), 24, WHITE, WIDTH/2, HEIGHT/4)
+        # self.draw_text(f"Coins:{self.player.coins}", 24, WHITE, WIDTH/2, HEIGHT/4)
+        # self.draw_text(f"High Score:{self.highscore}", 24, WHITE, WIDTH/2, HEIGHT/11)
         # updates screen with everything drawn in back buffer flips current screen to become new back buffer
         pg.display.flip()
 
