@@ -4,6 +4,7 @@ from settings import *
 from utils import *
 from os import path
 from random import randint
+from math import *
 
 vec = pg.math.Vector2
 
@@ -59,6 +60,9 @@ class Player(Sprite):
         self.last_update = 0
         self.jumping = False
         self.moving = False
+        self.last_shot = 0
+        self.shoot_delay = 500 
+
   
         self.coins = 0
         print("player instance created")
@@ -73,14 +77,32 @@ class Player(Sprite):
         if keys[pg.K_RIGHT]:
             self.acc.x = PLAYER_ACC
             self.facing_right = True
+            
         if keys[pg.K_DOWN]:
             self.acc.y = PLAYER_ACC
             
         if keys[pg.K_UP] and self.jumping == False:
             self.vel.y = -PLAYER_JUMP_ACC
             
+        if keys[pg.K_SPACE]:
+            self.pew()
+            if self.can_shoot == True:
+                PewPew(self.game, self.hit_rect.centerx, self.hit_rect.centery, TILESIZE / 4, TILESIZE / 4, vec(20, -2))
+            
         # if self.vel.x != 0 and self.vel.y != 0:
         #     self.vel *= 0.7071
+        
+    def pew(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            self.can_shoot = True
+        else:
+            self.can_shoot = False
+            
+        
+        return self.can_shoot
+        
     
     def jump(self):
         pass
@@ -99,7 +121,7 @@ class Player(Sprite):
                 self.image = self.idle_frames[self.current_frame]
                 
                 # now the player sprite faces the way its walking
-                if self.facing_right == False:
+                if self.facing_right == True:
                     self.image = pg.transform.flip(self.image, True, False)
                     
                 self.rect = self.image.get_rect()
@@ -139,7 +161,7 @@ class Player(Sprite):
         if abs(self.vel.y) < 0.1:
               self.vel.y = 0
         
-        # self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
+        self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
         floor_hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
         
         if floor_hits:
@@ -153,8 +175,8 @@ class Player(Sprite):
         
         self.pos += self.vel + 0.5 * self.acc
         
-        if self.vel.y == 0:
-            self.jumping = False
+        # if self.vel.y == 0:
+        #     self.jumping = False
             
         hits = pg.sprite.spritecollide(self, self.game.all_coins, True)
         if hits:
@@ -172,6 +194,61 @@ class Player(Sprite):
         self.hit_rect.centery = self.pos.y
         collide_with_stuff(self, self.game.all_walls, 'y')
         self.rect.center = self.hit_rect.center
+        
+        
+class PewPew(Sprite):
+    def __init__(self, game, x, y, w, h, pew_vel):
+        self.groups = game.all_sprites, game.all_pews
+        Sprite.__init__(self, self.groups)
+        self.game = game
+        
+        self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
+        self.image = self.spritesheet.get_image(0, TILESIZE, TILESIZE, TILESIZE)
+        self.image.set_colorkey(BLACK)
+        
+        spear_height = int(TILESIZE * 0.15)
+        spear_y_offset = TILESIZE + int(TILESIZE * 0.4)
+        self.image = self.spritesheet.get_image(0, spear_y_offset, TILESIZE, spear_height)
+
+        self.rect = self.image.get_rect()
+        # self.radius = TILESIZE / 8
+        # pg.draw.circle(self.image, YELLOW, self.rect.center, self.radius)
+        self.rect.x = x
+        self.rect.y = y
+        self.vel_x = pew_vel.x
+        self.vel_y = pew_vel.y
+        self.fired = False
+        
+    # def load_images(self):
+    #     self.shape = [self.spritesheet.get_image(0,1, TILESIZE,TILESIZE), self.spritesheet.get_image(TILESIZE,0, TILESIZE,TILESIZE)]
+    
+    def update(self):
+        self.acc = vec(7,10)
+        
+        # self.acc.x += self.vel.x * self.cofric
+        self.vel_x += self.acc.x * self.game.dt
+        self.vel_y += self.acc.y * self.game.dt
+        
+        angle = pg.math.degrees(pg.math.atan2(-self.vel_y, self.vel_x))
+        
+        # 2. Keep the spear's center in place while updating its rotated rect
+        old_center = self.rect.center
+        self.image = pg.transform.rotate(self.original_image, angle)
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
+        
+        self.rect.x += self.vel_x
+        self.rect.y += self.vel_y
+        
+        hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
+        if hits:
+            # self.game.small_expld_snd.play()
+            for i in range(randint(2, 4)):
+                Particle(self.game, self.rect.x, self.rect.y)
+            self.kill()
+        
+        
+          
 
 class Mob(Sprite):
     def __init__(self, game, x, y):
@@ -192,7 +269,6 @@ class Mob(Sprite):
         self.last_update = 0
         self.jumping = False
         self.moving = False
-        print("player instance created")
         self.load_images()
     def load_images(self):
             self.idle_frames = [self.spritesheet.get_image(64,0, TILESIZE,TILESIZE), self.spritesheet.get_image(96,0, TILESIZE,TILESIZE)]
@@ -216,11 +292,12 @@ class Mob(Sprite):
                     self.rect = self.image.get_rect()
                     self.rect.bottom = bottom
                     
-    def can_see(self, obj):
+    def sight(self, obj):
         my_pos = vec(self.rect.center)
         obj_pos = vec(obj.rect.center)
         sight_line = obj_pos - my_pos
         dist = sight_line.length()
+        self.last_seen = vec(0,0)
 
         if sight_line == (0,0):
             return True
@@ -237,6 +314,7 @@ class Mob(Sprite):
             check_rect.center = (current_pos.x, current_pos.y)
             for wall in self.game.all_walls:
                 if check_rect.colliderect(wall.rect):
+                    self.last_seen = current_pos - (sight_dir * 4)
                     return False
 
             obj_dist += 4
@@ -244,8 +322,12 @@ class Mob(Sprite):
         return True        
     
     def behave(self, obj):
-        if self.can_see(obj) == True:
+        if self.sight(obj) == True:
             self.follow(obj)
+            
+        # if self.sight(obj) == False:
+        #     obj.rect.center = self.last_seen
+        #     self.follow(obj)
     
     def follow(self, obj):
         direction = vec(obj.rect.centerx - self.rect.centerx, obj.rect.centery - self.rect.centery)
@@ -262,8 +344,8 @@ class Mob(Sprite):
         collide_with_stuff(self, self.game.all_walls, 'x')
         self.hit_rect.centery = self.pos.y
         collide_with_stuff(self, self.game.all_walls, 'y')
-        collide_with_stuff(self, self.game.all_sprites, 'x')
-        collide_with_stuff(self, self.game.all_sprites, 'y')
+        # collide_with_stuff(self, self.game.all_mobs, 'x')
+        # collide_with_stuff(self, self.game.all_mobs, 'y')
     
         self.rect.center = self.hit_rect.center
 
@@ -272,10 +354,10 @@ class Particle(Sprite):
         self.groups = game.all_sprites, game.all_particles
         Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pg.Surface((TILESIZE/4, TILESIZE/4))
+        self.image = pg.Surface((TILESIZE/8, TILESIZE/8))
         self.image.fill(GOLD)
         self.rect = self.image.get_rect()
-        self.vel = vec(randint(-180,180),randint(-180,180))
+        self.vel = vec(randint(60, 80), 0).rotate(randint(0, 360))
         self.pos = vec(x,y)
         self.rect.center = self.pos
         self.speed = 8
@@ -302,7 +384,7 @@ class Wall(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(AQUA)
+        self.image.fill(WHITE)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0) 
         self.pos = vec(x,y) * TILESIZE

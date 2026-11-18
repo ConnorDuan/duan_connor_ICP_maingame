@@ -13,7 +13,7 @@ GREEN       = (0,255,0)
 LIGHT_GRAY  = (200, 200, 200)
 GRAY        = (128, 128, 128)
 DARK_GRAY   = (64, 64, 64)
-BLACK       = (0, 0, 0)
+BLACK       = (255, 0, 255)
 RED         = (255, 0, 0)
 BLUE        = (0, 0, 255)
 YELLOW      = (255, 255, 0)
@@ -27,7 +27,7 @@ PINK        = (255, 192, 203)
 GOLD        = (255, 215, 0)
 
 # player settings
-PLAYER_ACC = 15
+PLAYER_ACC = 10
 PLAYER_JUMP_ACC = 17
 PLAYER_FRIC = -1
 PLAYER_COLLISION_BUFFER = -5

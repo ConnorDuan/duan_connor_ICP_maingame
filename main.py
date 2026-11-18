@@ -12,7 +12,7 @@ change test
 
 
 GOALS: survive for as long as you can
-RULES: enemies chase you only throw weapons
+RULES: enemies chase you, can only throw weapons
 FEEDBACK: visuals, sounds
 FREEDOM: you can befriend enemies
 '''
@@ -74,6 +74,7 @@ class Game:
         self.all_coins = pg.sprite.Group()
         self.all_particles = pg.sprite.Group()
         self.all_tiles = pg.sprite.Group()
+        self.all_pews = pg.sprite.Group()
         
         
         print(self.map.data)
@@ -81,13 +82,13 @@ class Game:
             for col, tile in enumerate(tiles):
                 if tile == '1':
                     Wall(self, col, row)
-                if tile == 'M':
-                    Mob(self, col, row)
-                if tile == 'C':
-                    Coin(self, col, row)
-                if tile == 'I':
-                    f = FloorTile(self, col, row, CYAN)
-                    f.variant = "ice"
+                # if tile == 'M':
+                #     Mob(self, col, row)
+                # if tile == 'C':
+                #     Coin(self, col, row)
+                # if tile == 'I':
+                #     f = FloorTile(self, col, row, CYAN)
+                #     f.variant = "ice"
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == 'P':
