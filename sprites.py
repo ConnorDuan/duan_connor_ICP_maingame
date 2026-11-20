@@ -4,7 +4,7 @@ from settings import *
 from utils import *
 from os import path
 from random import randint
-from math import *
+import math
 
 vec = pg.math.Vector2
 
@@ -60,15 +60,15 @@ class Player(Sprite):
         self.last_update = 0
         self.jumping = False
         self.moving = False
-        self.last_shot = 0
-        self.shoot_delay = 500 
+        # self.last_shot = 0
+        # self.shoot_delay = 500 
+        self.ammo = 1
 
   
         self.coins = 0
         print("player instance created")
         self.load_images()
         
-    # gets player input
     def get_keys(self):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
@@ -78,8 +78,8 @@ class Player(Sprite):
             self.acc.x = PLAYER_ACC
             self.facing_right = True
             
-        if keys[pg.K_DOWN]:
-            self.acc.y = PLAYER_ACC
+        # if keys[pg.K_DOWN]:
+        #     self.acc.y = PLAYER_ACC
             
         if keys[pg.K_UP] and self.jumping == False:
             self.vel.y = -PLAYER_JUMP_ACC
@@ -87,26 +87,30 @@ class Player(Sprite):
         if keys[pg.K_SPACE]:
             self.pew()
             if self.can_shoot == True:
-                PewPew(self.game, self.hit_rect.centerx, self.hit_rect.centery, TILESIZE / 4, TILESIZE / 4, vec(20, -2))
-            
-        # if self.vel.x != 0 and self.vel.y != 0:
-        #     self.vel *= 0.7071
+                if self.ammo > 0:
+                    shoot_dir = 15
+                    if self.vel.x < 0:
+                        shoot_dir = -15
+                    PewPew(self.game, self.hit_rect.centerx, self.hit_rect.centery, TILESIZE / 4, TILESIZE / 4, vec(shoot_dir, -2))
+                    self.ammo -= 1
+                    
+        if keys[pg.K_DOWN] and self.jumping == False:
+            hits = pg.sprite.spritecollide(self, self.game.all_pews, True)
+            if hits:
+                self.ammo += 1
         
     def pew(self):
-        now = pg.time.get_ticks()
-        if now - self.last_shot > self.shoot_delay:
-            self.last_shot = now
-            self.can_shoot = True
-        else:
-            self.can_shoot = False
+        self.can_shoot = True
+        # now = pg.time.get_ticks()
+        # if now - self.last_shot > self.shoot_delay:
+        #     self.last_shot = now
+        #     self.can_shoot = True
+        # else:
+        #     self.can_shoot = False
             
         
         return self.can_shoot
         
-    
-    def jump(self):
-        pass
-    
     def load_images(self):
         self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(TILESIZE,0, TILESIZE,TILESIZE)]
         
@@ -121,7 +125,7 @@ class Player(Sprite):
                 self.image = self.idle_frames[self.current_frame]
                 
                 # now the player sprite faces the way its walking
-                if self.facing_right == True:
+                if self.facing_right == False:
                     self.image = pg.transform.flip(self.image, True, False)
                     
                 self.rect = self.image.get_rect()
@@ -162,9 +166,10 @@ class Player(Sprite):
               self.vel.y = 0
         
         self.pos += self.vel * self.game.dt + 0.5 * self.acc * (self.game.dt ** 2)
+        
         floor_hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
         
-        if floor_hits:
+        if floor_hits and self.vel.y >= 0:
             self.jumping = False
         elif floor_hits != True:
             self.jumping = True
@@ -185,7 +190,7 @@ class Player(Sprite):
             self.game.pickup_snd.play()
             # print(f"I have {self.coins} coins")
             for i in range(20):
-                Particle(self.game, hits[0].rect.x, hits[0].rect.y)
+                Particle(self.game, hits[0].rect.x, hits[0].rect.y, 1, GOLD)
                 hits[0].kill()
             print(str(len(self.game.all_particles)))
 
@@ -203,53 +208,67 @@ class PewPew(Sprite):
         self.game = game
         
         self.spritesheet = Spritesheet(path.join(self.game.img_dir, "sprite_sheet.png"))
-        self.image = self.spritesheet.get_image(0, TILESIZE, TILESIZE, TILESIZE)
-        self.image.set_colorkey(BLACK)
         
-        spear_height = int(TILESIZE * 0.15)
-        spear_y_offset = TILESIZE + int(TILESIZE * 0.4)
-        self.image = self.spritesheet.get_image(0, spear_y_offset, TILESIZE, spear_height)
+        spear_height = int(TILESIZE * 0.75)
+        # spear_y_offset = TILESIZE + int(TILESIZE * 2)
+        self.image = self.spritesheet.get_image(0, TILESIZE, TILESIZE, spear_height)
+        self.image.set_colorkey(BLACK)
+
 
         self.rect = self.image.get_rect()
-        # self.radius = TILESIZE / 8
-        # pg.draw.circle(self.image, YELLOW, self.rect.center, self.radius)
         self.rect.x = x
-        self.rect.y = y
+        self.rect.y = y - TILESIZE / 2
+        
+        
         self.vel_x = pew_vel.x
         self.vel_y = pew_vel.y
-        self.fired = False
-        
-    # def load_images(self):
-    #     self.shape = [self.spritesheet.get_image(0,1, TILESIZE,TILESIZE), self.spritesheet.get_image(TILESIZE,0, TILESIZE,TILESIZE)]
-    
+        self.on_ground = False
+        self.thrown = False
+        self.hit_happened = False
+
     def update(self):
-        self.acc = vec(7,10)
         
-        # self.acc.x += self.vel.x * self.cofric
+        hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
+        if hits and self.hit_happened == False:
+            self.hit_happened = True
+            for i in range(randint(2, 4)):
+                Particle(self.game, self.rect.x, self.rect.y, 0.5, BLCK)
+                
+            self.on_ground = True
+            self.thrown = False
+        
+        elif hits and self.hit_happened == True:
+            self.on_ground = True
+            self.thrown = False
+        
+        else:
+            self.hit_happened = False
+            self.thrown = True
+            self.on_ground = False
+            
+        
+
+        self.states()
         self.vel_x += self.acc.x * self.game.dt
         self.vel_y += self.acc.y * self.game.dt
-        
-        angle = pg.math.degrees(pg.math.atan2(-self.vel_y, self.vel_x))
-        
-        # 2. Keep the spear's center in place while updating its rotated rect
-        old_center = self.rect.center
-        self.image = pg.transform.rotate(self.original_image, angle)
-        self.rect = self.image.get_rect()
-        self.rect.center = old_center
         
         self.rect.x += self.vel_x
         self.rect.y += self.vel_y
         
-        hits = pg.sprite.spritecollide(self, self.game.all_walls, False)
-        if hits:
-            # self.game.small_expld_snd.play()
-            for i in range(randint(2, 4)):
-                Particle(self.game, self.rect.x, self.rect.y)
-            self.kill()
-        
-        
-          
 
+    def states(self):
+        if self.on_ground == True:
+            self.acc = vec(0,0)
+            self.vel_x = 0
+            self.vel_y = 0
+            self.image = self.spritesheet.get_image(TILESIZE, TILESIZE, TILESIZE, TILESIZE)
+            self.image.set_colorkey(BLACK)
+            
+        if self.thrown == True:
+            self.acc = vec(7,10)
+            self.image = self.spritesheet.get_image(0, TILESIZE, TILESIZE, TILESIZE)
+            self.image.set_colorkey(BLACK)
+            
 class Mob(Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites, game.all_mobs
@@ -350,17 +369,18 @@ class Mob(Sprite):
         self.rect.center = self.hit_rect.center
 
 class Particle(Sprite):
-    def __init__(self, game, x, y):
+    def __init__(self, game, x, y, cooldown, color):
         self.groups = game.all_sprites, game.all_particles
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE/8, TILESIZE/8))
-        self.image.fill(GOLD)
+        self.image.fill(color)
         self.rect = self.image.get_rect()
         self.vel = vec(randint(60, 80), 0).rotate(randint(0, 360))
         self.pos = vec(x,y)
         self.rect.center = self.pos
         self.speed = 8
+        self.cooldown = cooldown
         self.countdown = Cooldown()
         self.countdown.event_time = floor(pg.time.get_ticks()/1000)
         print("I created a particle!")
@@ -370,14 +390,13 @@ class Particle(Sprite):
     def update(self):
         self.countdown.ticking()
         self.pos += self.vel * self.speed * self.game.dt
-        if self.countdown.delta > 1:
+        if self.countdown.delta > self.cooldown:
             self.kill()
             print(str(len(self.game.all_particles)))
             
         self.rect.x = self.pos.x
         self.rect.y = self.pos.y
     
-   
 class Wall(Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites, game.all_walls
@@ -410,7 +429,7 @@ class Coin(Sprite):
         self.image = pg.Surface((TILESIZE, TILESIZE))
         pg.draw.circle(self.image, GOLD, (TILESIZE/2, TILESIZE/2), TILESIZE/2)
         # pg.draw.ellipse(self.image, GOLD, (TILESIZE/2, TILESIZE/2), TILESIZE/2)
-        self.image.set_colorkey(BLACK)
+        self.image.set_colorkey(BLCK)
         # self.image.fill(GOLD)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0) 
